@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
     [Header("Movimiento")]
-    public float velocidad = 5f;
+    public float velocidad = 5.5f;
 
     [Header("Salto")]
     public float fuerzaSalto = 8f;
@@ -23,16 +24,28 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
-        // Obtenemos los componentes del Zorro
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         col = GetComponent<Collider2D>();
+
+        // Cargar velocidad/salto si fue elegido en la escena del Menú Principal
+        if (PlayerPrefs.HasKey("VelocidadZorro"))
+        {
+            velocidad = PlayerPrefs.GetFloat("VelocidadZorro");
+            fuerzaSalto = PlayerPrefs.GetFloat("SaltoZorro");
+        }
     }
 
     void Update()
     {
-        // 1. Leer las teclas de movimiento horizontal (A/D o Flechas)
+        // Presionar ESC para volver a la Escena del Menú Principal
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            SceneManager.LoadScene("MenuPrincipal");
+            return;
+        }
+
         movimientoHorizontal = 0f;
 
         if (Keyboard.current != null)
@@ -46,7 +59,6 @@ public class PlayerController : MonoBehaviour
                 movimientoHorizontal = 1f;
             }
 
-            // Detectar salto con la Barra Espaciadora en Unity 6
             if (Keyboard.current.spaceKey.wasPressedThisFrame)
             {
                 quiereSaltar = true;
@@ -61,17 +73,15 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // 2. Voltear al personaje según la dirección (Flip horizontal)
         if (movimientoHorizontal > 0)
         {
-            spriteRenderer.flipX = false; // Mirar a la derecha
+            spriteRenderer.flipX = false;
         }
         else if (movimientoHorizontal < 0)
         {
-            spriteRenderer.flipX = true;  // Mirar a la izquierda
+            spriteRenderer.flipX = true;
         }
 
-        // 3. Controlar la animación de correr/descansar
         bool seEstaMoviendo = movimientoHorizontal != 0;
         if (animator != null)
         {
@@ -81,13 +91,10 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
-        // 4. Mover horizontalmente manteniendo la velocidad vertical
         rb.linearVelocity = new Vector2(movimientoHorizontal * velocidad, rb.linearVelocity.y);
 
-        // 5. Aplicar salto si presionó Espacio y está tocando el suelo
         if (quiereSaltar)
         {
-            // Verificamos con un rayo invisible si hay suelo debajo del zorro
             bool estaEnSuelo = Physics2D.Raycast(transform.position, Vector2.down, 0.8f);
 
             if (estaEnSuelo)
@@ -95,18 +102,16 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, fuerzaSalto);
             }
 
-            quiereSaltar = false; // Reiniciar la orden de salto
+            quiereSaltar = false;
         }
     }
 
-    // 6. Función para sumar (dulces) o restar (agrias) puntos
     public void CambiarPuntos(int cantidad)
     {
         puntos += cantidad;
         Debug.Log("Puntos actuales: " + puntos);
     }
 
-    // 7. Dibujar el marcador de puntos en la esquina superior izquierda automáticamente
     void OnGUI()
     {
         GUIStyle estilo = new GUIStyle(GUI.skin.box);
